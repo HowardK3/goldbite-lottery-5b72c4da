@@ -528,30 +528,41 @@ function doStop(cheat){
   isStopping=true;
 
   let targetName=cheat?TARGET:NAMES[Math.floor(Math.random()*NAMES.length)];
-  let targetIdx=loopArr.indexOf(targetName);
-  const ci=getCenterIndex();
-  if(targetIdx===-1||Math.abs(targetIdx-ci)<NAMES.length/2){
-    targetIdx=loopArr.lastIndexOf(targetName);
-  }
-  if(targetIdx===-1)targetIdx=ci;
 
   const half=slotWindow.clientHeight/2;
-  const targetY=-(targetIdx*itemH)+half-itemH/2;
+  const loopH = NAMES.length * itemH;
+  const totalH = loopArr.length * itemH;
 
-  const minExtra=NAMES.length*itemH;
-  let finalY=targetY;
-  while(finalY>currentY+minExtra){finalY-=loopArr.length*itemH/3}
-  while(finalY<currentY+minExtra){finalY+=NAMES.length*itemH}
+  // 目標在「中段那份 NAMES」（index NAMES.length .. 2*NAMES.length-1）的對應位置
+  // 用中段索引避免 finalY 超出 pool 上下邊界
+  const targetMidIdx = NAMES.length + NAMES.indexOf(targetName);
+  const baseFinalY = -(targetMidIdx*itemH) + half - itemH/2;
+
+  // 確保至少再轉一圈以上（自然減速感）
+  const minExtra = loopH * 1.2;
+  let finalY = baseFinalY;
+  while (finalY > currentY - minExtra) finalY -= loopH;
+
+  // 防呆：finalY 不能超出 pool 下界（避免空白）
+  while (finalY < -totalH + slotWindow.clientHeight) finalY += loopH;
 
   const dist=Math.abs(finalY-currentY);
-  const duration=Math.max(2200,Math.min(3500,dist/speed*16));
+  const duration=Math.max(5000,Math.min(6500,dist/speed*16+2800));
 
   const startY=currentY;
   const startT=performance.now();
 
   cancelAnimationFrame(raf);
 
-  function easeOut(t){return 1-Math.pow(1-t,4)}
+  function easeOut(t){
+    if(t<0.6){
+      const p=t/0.6;
+      return 0.7*(1-Math.pow(1-p,3));
+    }else{
+      const p=(t-0.6)/0.4;
+      return 0.7+0.3*(1-Math.pow(1-p,5));
+    }
+  }
 
   function decelLoop(ts){
     const elapsed=ts-startT;
