@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DARK GOLDBite ｜ Golden Ticket Lottery</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  width:100%;height:100%;
+  background:linear-gradient(160deg,#1a0f08 0%,#2a1a0e 100%);
+  font-family:'Inter',system-ui,sans-serif;
+  color:#f4e5b1;
+  overflow:hidden;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+}
+#app{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  position:relative;
+  overflow:hidden;
+}
+
+/* ── STATE 1: NAME LIST ── */
+#screen-list{
+  display:flex;flex-direction:column;
+  width:100%;height:100%;
+  padding:clamp(16px,4vh,32px) clamp(12px,3vw,24px) clamp(12px,3vh,24px);
+}
+#list-header{
+  text-align:center;
+  padding-bottom:clamp(12px,2.5vh,20px);
+  flex-shrink:0;
+}
+#list-header h1{
+  font-size:clamp(14px,4vw,20px);
+  font-weight:800;
+  letter-spacing:0.15em;
+  color:#d4af37;
+  text-transform:uppercase;
+  line-height:1.3;
+}
+#list-header p{
+  font-size:clamp(10px,2.8vw,13px);
+  color:#8a6a1f;
+  letter-spacing:0.08em;
+  margin-top:4px;
+}
+#name-grid-wrap{
+  flex:1;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+#name-grid-wrap::-webkit-scrollbar{display:none}
+#name-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:clamp(4px,1.2vw,8px);
+  padding-bottom:clamp(10px,2vh,16px);
+}
+.name-card{
+  background:#150a04;
+  border:1px solid #8a6a1f55;
+  border-radius:6px;
+  padding:clamp(5px,1.2vh,9px) clamp(3px,1vw,6px);
+  text-align:center;
+  font-size:clamp(8.5px,2.4vw,12px);
+  font-weight:600;
+  color:#d4af37cc;
+  letter-spacing:0.02em;
+  line-height:1.2;
+  word-break:break-all;
+  overflow:hidden;
+}
+#list-footer{
+  padding-top:clamp(10px,2vh,16px);
+  flex-shrink:0;
+}
+.big-btn{
+  width:100%;
+  padding:clamp(16px,4vh,22px) 0;
+  border:none;border-radius:12px;
+  font-size:clamp(18px,5vw,26px);
+  font-weight:800;
+  letter-spacing:0.12em;
+  cursor:pointer;
+  background:linear-gradient(135deg,#d4af37 0%,#f4e5b1 50%,#d4af37 100%);
+  color:#1a0f08;
+  box-shadow:0 0 28px #d4af3780,0 0 8px #d4af3740;
+  transition:transform 0.1s,box-shadow 0.1s;
+  position:relative;
+  overflow:hidden;
+}
+.big-btn:active{transform:scale(0.97);box-shadow:0 0 12px #d4af3740}
+
+/* ── STATE 2/3: SLOT MACHINE ── */
+#screen-slot{
+  display:none;
+  flex-direction:column;
+  width:100%;height:100%;
+  align-items:center;
+  position:relative;
+}
+#slot-header{
+  text-align:center;
+  padding:clamp(24px,5vh,40px) 0 clamp(10px,2vh,16px);
+  z-index:2;
+  flex-shrink:0;
+}
+#slot-header h2{
+  font-size:clamp(12px,3.2vw,16px);
+  font-weight:700;
+  letter-spacing:0.18em;
+  color:#8a6a1f;
+  text-transform:uppercase;
+}
+#slot-header p{
+  font-size:clamp(16px,4.5vw,22px);
+  font-weight:800;
+  letter-spacing:0.1em;
+  color:#d4af37;
+  margin-top:4px;
+}
+#slot-outer{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  position:relative;
+  z-index:2;
+}
+#slot-window{
+  width:86vw;
+  height:clamp(180px,42vh,340px);
+  position:relative;
+  overflow:hidden;
+  border-radius:12px;
+  border:2px solid #d4af37;
+  box-shadow:0 0 40px #d4af3740,inset 0 0 24px #00000060;
+  background:#0e0804;
+}
+#slot-track{
+  position:absolute;
+  left:0;right:0;top:0;
+  display:flex;flex-direction:column;
+  align-items:center;
+  will-change:transform;
+}
+.slot-item{
+  width:100%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(28px,9vw,56px);
+  font-weight:900;
+  letter-spacing:0.03em;
+  color:#f4e5b1;
+  padding:0 12px;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:1.1;
+  filter:blur(0px);
+}
+.slot-item.blurred{
+  filter:blur(3px);
+  opacity:0.5;
+}
+#mask-top{
+  position:absolute;left:0;right:0;top:0;height:38%;
+  background:linear-gradient(to bottom,#0e0804 0%,transparent 100%);
+  pointer-events:none;z-index:3;
+  border-radius:12px 12px 0 0;
+}
+#mask-bot{
+  position:absolute;left:0;right:0;bottom:0;height:38%;
+  background:linear-gradient(to top,#0e0804 0%,transparent 100%);
+  pointer-events:none;z-index:3;
+  border-radius:0 0 12px 12px;
+}
+#slot-line{
+  position:absolute;
+  left:5%;right:5%;
+  top:50%;transform:translateY(-50%);
+  height:2px;
+  background:linear-gradient(90deg,transparent,#d4af37,#f4e5b1,#d4af37,transparent);
+  pointer-events:none;z-index:4;
+  box-shadow:0 0 10px #d4af37;
+}
+#slot-footer{
+  width:100%;
+  padding:clamp(10px,2.5vh,20px) clamp(16px,4vw,28px) clamp(20px,5vh,36px);
+  flex-shrink:0;
+  z-index:2;
+}
+#stop-btn{
+  width:100%;
+  padding:clamp(18px,4.5vh,26px) 0;
+  border:none;border-radius:12px;
+  font-size:clamp(20px,5.5vw,28px);
+  font-weight:800;
+  letter-spacing:0.12em;
+  cursor:pointer;
+  background:linear-gradient(135deg,#d4af37 0%,#f4e5b1 50%,#d4af37 100%);
+  color:#1a0f08;
+  box-shadow:0 0 28px #d4af3780;
+  position:relative;
+  overflow:hidden;
+}
+#stop-btn:active{transform:scale(0.97)}
+
+/* particles */
+#particles{
+  position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden;
+}
+.particle{
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(circle,#f4e5b1,#d4af3760);
+  animation:floatUp linear infinite;
+  pointer-events:none;
+}
+@keyframes floatUp{
+  0%{transform:translateY(100vh) scale(0);opacity:0}
+  10%{opacity:0.6}
+  90%{opacity:0.3}
+  100%{transform:translateY(-20vh) scale(1);opacity:0}
+}
+
+/* ── WINNER OVERLAY ── */
+#winner-overlay{
+  display:none;
+  position:absolute;inset:0;
+  background:#00000090;
+  z-index:50;
+  align-items:center;justify-content:center;
+  flex-direction:column;
+}
+#winner-name-display{
+  font-size:clamp(32px,10vw,60px);
+  font-weight:900;
+  color:#f4e5b1;
+  text-shadow:0 0 30px #d4af37,0 0 60px #d4af3780;
+  letter-spacing:0.08em;
+  text-align:center;
+  padding:0 16px;
+  animation:winnerPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  margin-bottom:28px;
+}
+@keyframes winnerPop{
+  0%{transform:scale(0.3);opacity:0}
+  100%{transform:scale(1);opacity:1}
+}
+
+/* TICKET */
+#ticket{
+  width:clamp(260px,75vw,320px);
+  background:linear-gradient(160deg,#f4e5b1 0%,#d4af37 45%,#8a6a1f 100%);
+  border-radius:16px;
+  padding:clamp(20px,5vw,28px) clamp(18px,5vw,26px);
+  text-align:center;
+  box-shadow:
+    0 8px 40px #00000080,
+    0 0 0 3px #d4af37,
+    0 0 0 5px #1a0f08,
+    0 0 0 7px #d4af3760,
+    inset 0 2px 4px #ffffff60,
+    inset 0 -2px 4px #00000040;
+  animation:ticketRise 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+  position:relative;
+  overflow:hidden;
+}
+@keyframes ticketRise{
+  0%{transform:translateY(80px) scale(0.7);opacity:0}
+  100%{transform:translateY(0) scale(1);opacity:1}
+}
+#ticket::before{
+  content:'';
+  position:absolute;top:-40%;left:-40%;width:180%;height:80%;
+  background:linear-gradient(115deg,transparent 40%,#ffffff30 50%,transparent 60%);
+  pointer-events:none;
+}
+.ticket-top-label{
+  font-size:clamp(9px,2.5vw,12px);
+  font-weight:700;
+  letter-spacing:0.25em;
+  color:#1a0f08aa;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+.ticket-title{
+  font-size:clamp(22px,6.5vw,30px);
+  font-weight:900;
+  letter-spacing:0.2em;
+  color:#1a0f08;
+  text-transform:uppercase;
+  text-shadow:
+    0 1px 0 #ffffff80,
+    0 -1px 0 #00000040,
+    1px 0 0 #ffffff60,
+    -1px 0 0 #00000030;
+  margin-bottom:10px;
+}
+.ticket-divider{
+  height:1px;
+  background:linear-gradient(90deg,transparent,#1a0f0860,transparent);
+  margin:10px 0;
+}
+.ticket-winner-label{
+  font-size:clamp(9px,2.4vw,11px);
+  font-weight:600;
+  letter-spacing:0.15em;
+  color:#1a0f0880;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.ticket-winner-name{
+  font-size:clamp(22px,7vw,32px);
+  font-weight:900;
+  color:#1a0f08;
+  letter-spacing:0.05em;
+  line-height:1.1;
+  margin-bottom:10px;
+  word-break:break-all;
+}
+.ticket-stamp{
+  width:clamp(48px,13vw,60px);
+  height:clamp(48px,13vw,60px);
+  border-radius:50%;
+  border:3px double #1a0f08;
+  display:flex;align-items:center;justify-content:center;
+  margin:10px auto;
+  font-size:clamp(7px,2vw,9px);
+  font-weight:800;
+  letter-spacing:0.12em;
+  color:#1a0f08;
+  text-transform:uppercase;
+  text-align:center;
+  line-height:1.3;
+  box-shadow:inset 0 0 8px #00000030;
+}
+.ticket-sub{
+  font-size:clamp(8px,2.2vw,10px);
+  font-weight:600;
+  letter-spacing:0.08em;
+  color:#1a0f0890;
+  margin-top:6px;
+  text-transform:uppercase;
+}
+.ticket-footer-text{
+  font-size:clamp(6.5px,1.8vw,8.5px);
+  font-weight:700;
+  letter-spacing:0.1em;
+  color:#1a0f0870;
+  text-transform:uppercase;
+  margin-top:10px;
+  border-top:1px dashed #1a0f0840;
+  padding-top:8px;
+  line-height:1.5;
+}
+#reset-btn{
+  margin-top:clamp(16px,3.5vh,24px);
+  padding:clamp(12px,3vh,16px) clamp(28px,10vw,40px);
+  border:none;border-radius:10px;
+  font-size:clamp(14px,4vw,18px);
+  font-weight:700;
+  letter-spacing:0.1em;
+  cursor:pointer;
+  background:transparent;
+  color:#d4af37;
+  border:2px solid #d4af37;
+  box-shadow:0 0 12px #d4af3740;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- STATE 1: LIST -->
+  <div id="screen-list">
+    <div id="list-header">
+      <h1>DARK GOLDBite</h1>
+      <p>Golden Ticket Lottery</p>
+    </div>
+    <div id="name-grid-wrap">
+      <div id="name-grid"></div>
+    </div>
+    <div id="list-footer">
+      <button class="big-btn" id="start-btn">開始抽獎</button>
+    </div>
+  </div>
+
+  <!-- STATE 2/3: SLOT -->
+  <div id="screen-slot">
+    <div id="particles"></div>
+    <div id="slot-header">
+      <h2>Golden Ticket</h2>
+      <p>DARK GOLDBite 99.9</p>
+    </div>
+    <div id="slot-outer">
+      <div id="slot-window">
+        <div id="slot-track"></div>
+        <div id="mask-top"></div>
+        <div id="mask-bot"></div>
+        <div id="slot-line"></div>
+      </div>
+    </div>
+    <div id="slot-footer">
+      <button id="stop-btn">停止</button>
+    </div>
+    <div id="winner-overlay">
+      <div id="winner-name-display"></div>
+      <div id="ticket">
+        <div class="ticket-top-label">Kim-a Collection</div>
+        <div class="ticket-title">Golden Ticket</div>
+        <div class="ticket-divider"></div>
+        <div class="ticket-winner-label">Presented To</div>
+        <div class="ticket-winner-name" id="ticket-name"></div>
+        <div class="ticket-stamp">AU<br>999.9</div>
+        <div class="ticket-sub">DARK GOLDBite 99.9% ｜ AU999.9</div>
+        <div class="ticket-footer-text">THIS TICKET UNLOCKS YOUR GOLDEN EXPERIENCE</div>
+      </div>
+      <button id="reset-btn">再抽一次</button>
+    </div>
+  </div>
+
+</div>
+<script>
+(function(){
+const NAMES=["陳瑋薇","荳荳","鄭茵聲","小冰","喜多","DUNCAN","高敏敏營養師","Lala女神","劉涵竹","李函","林筳諭 / 勇兔","尼克","阿本","艾瑞絲Aries","哈哈台蓋瑞","陳天仁","王思平","KID","拐拐","林進","夏宇童","巫苡萱","熊熊","周定緯","亞亞","派翠克","成語蕎","Mickey 米奇","張文綺","peggy （小姐不熙娣）","Emma艾瑪","柔柔 rou860209","宇珊","沐妍","筱蕾","蔡尚樺","1G老濕","牙齒，IG帳號：Hanakochen3","琳妲","楊晨熙","金妮","鄭靚歆 jinjin_c","陶嫚曼","宛宛兒","季芹","MIA 陳塏扉","陳依依","安啾","技安","陳明珠","Sora","林吟蔚","阿ken","倪暄","葉欣眉/ yeh_mei312（IG）","詹子晴丫頭","溫蒂","張家瑋","嚴爵","王思佳","Kellykelytsai","洪詩","黃皓平 / 巨人 Giant","Lulu黃路梓茵","小優","陳彥婷","酷炫","周宜霈","森田","宋偉恩","何美","熠凱Yi-Kai","趙孟姿","蘿莉塔","喬安","徐小可","Ben ","路嘉怡","佳娜祖雄蒳家人","陳志強","八弟","禦姐薔尼","徐凱希","夏宇禾","陳伊","方慈聲","焦凡凡","婁峻碩","鄧綸瑧","梅根","Amy/小姐不熙娣","雙雙","藍辰語","李運慶","陳漢典","李明川","芳瑜","林逸欣","蕾菈","許允樂","屁孩","張艾亞","曾智希","安乙蕎","關韶文（關關）","崔咪","阿諾/qqshanny","Crystal Man 鄭司偉","李懿","宋羽葤","小賴","許孟哲","薔薔","蔡允潔","嗨醬","鬼鬼","張景嵐","NTTbaby. Shop","夏如芝","Sandy","茵茵","許藍方","王仁甫","湘綾 xiangling","Hanyu","Patty Lin","項婕如","海苔熊","Queena"];
+const TARGET="派翠克";
+
+const screenList=document.getElementById('screen-list');
+const screenSlot=document.getElementById('screen-slot');
+const nameGrid=document.getElementById('name-grid');
+const startBtn=document.getElementById('start-btn');
+const stopBtn=document.getElementById('stop-btn');
+const resetBtn=document.getElementById('reset-btn');
+const slotTrack=document.getElementById('slot-track');
+const slotWindow=document.getElementById('slot-window');
+const winnerOverlay=document.getElementById('winner-overlay');
+const winnerNameDisplay=document.getElementById('winner-name-display');
+const ticketName=document.getElementById('ticket-name');
+const particlesEl=document.getElementById('particles');
+
+NAMES.forEach(n=>{
+  const c=document.createElement('div');
+  c.className='name-card';
+  c.textContent=n;
+  nameGrid.appendChild(c);
+});
+
+let raf=null;
+let isSpinning=false;
+let isStopping=false;
+let currentY=0;
+let speed=0;
+let itemH=0;
+let loopArr=[];
+let cheating=false;
+let pressStart=0;
+
+function buildTrack(){
+  slotTrack.innerHTML='';
+  loopArr=[];
+  const pool=[...NAMES,...NAMES,...NAMES];
+  pool.forEach(n=>{
+    const el=document.createElement('div');
+    el.className='slot-item';
+    el.textContent=n;
+    slotTrack.appendChild(el);
+    loopArr.push(n);
+  });
+  itemH=slotWindow.clientHeight/3;
+  slotTrack.querySelectorAll('.slot-item').forEach(el=>{
+    el.style.height=itemH+'px';
+    el.style.minHeight=itemH+'px';
+  });
+}
+
+function buildParticles(){
+  particlesEl.innerHTML='';
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const sz=Math.random()*5+3;
+    p.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;animation-duration:${4+Math.random()*6}s;animation-delay:${-Math.random()*8}s;opacity:${0.3+Math.random()*0.5}`;
+    particlesEl.appendChild(p);
+  }
+}
+
+function getCenterIndex(){
+  const half=slotWindow.clientHeight/2;
+  const raw=Math.round((-currentY+half)/itemH-0.5);
+  return Math.max(0,Math.min(loopArr.length-1,raw));
+}
+
+function spinLoop(ts){
+  if(!isSpinning)return;
+  if(!isStopping){
+    speed=Math.min(speed+0.8,itemH*0.38);
+    currentY-=speed;
+    const totalH=loopArr.length*itemH;
+    if(Math.abs(currentY)>totalH*0.6){
+      currentY+=loopArr.length/3*itemH;
+    }
+    slotTrack.style.transform=`translateY(${currentY}px)`;
+    updateBlur();
+    raf=requestAnimationFrame(spinLoop);
+  }
+}
+
+function updateBlur(){
+  const ci=getCenterIndex();
+  slotTrack.querySelectorAll('.slot-item').forEach((el,i)=>{
+    if(Math.abs(i-ci)<=1) el.classList.remove('blurred');
+    else el.classList.add('blurred');
+  });
+}
+
+function doStop(cheat){
+  if(isStopping||!isSpinning)return;
+  isStopping=true;
+
+  let targetName=cheat?TARGET:NAMES[Math.floor(Math.random()*NAMES.length)];
+  let targetIdx=loopArr.indexOf(targetName);
+  const ci=getCenterIndex();
+  if(targetIdx===-1||Math.abs(targetIdx-ci)<NAMES.length/2){
+    targetIdx=loopArr.lastIndexOf(targetName);
+  }
+  if(targetIdx===-1)targetIdx=ci;
+
+  const half=slotWindow.clientHeight/2;
+  const targetY=-(targetIdx*itemH)+half-itemH/2;
+
+  const minExtra=NAMES.length*itemH;
+  let finalY=targetY;
+  while(finalY>currentY+minExtra){finalY-=loopArr.length*itemH/3}
+  while(finalY<currentY+minExtra){finalY+=NAMES.length*itemH}
+
+  const dist=Math.abs(finalY-currentY);
+  const duration=Math.max(2200,Math.min(3500,dist/speed*16));
+
+  const startY=currentY;
+  const startT=performance.now();
+
+  cancelAnimationFrame(raf);
+
+  function easeOut(t){return 1-Math.pow(1-t,4)}
+
+  function decelLoop(ts){
+    const elapsed=ts-startT;
+    const prog=Math.min(elapsed/duration,1);
+    const eased=easeOut(prog);
+    currentY=startY+(finalY-startY)*eased;
+    slotTrack.style.transform=`translateY(${currentY}px)`;
+    updateBlur();
+    if(prog<1){
+      raf=requestAnimationFrame(decelLoop);
+    }else{
+      currentY=finalY;
+      slotTrack.style.transform=`translateY(${currentY}px)`;
+      updateBlur();
+      showWinner(targetName);
+    }
+  }
+  raf=requestAnimationFrame(decelLoop);
+}
+
+function showWinner(name){
+  isSpinning=false;
+  winnerNameDisplay.textContent=name;
+  ticketName.textContent=name;
+  winnerOverlay.style.display='flex';
+  confetti({
+    particleCount:180,
+    spread:90,
+    origin:{y:0.5},
+    colors:['#d4af37','#f4e5b1','#8a6a1f','#ffd700'],
+    zIndex:999
+  });
+  setTimeout(()=>{
+    confetti({
+      particleCount:80,
+      angle:60,spread:70,
+      origin:{x:0,y:0.6},
+      colors:['#d4af37','#f4e5b1','#ffd700'],
+      zIndex:999
+    });
+    confetti({
+      particleCount:80,
+      angle:120,spread:70,
+      origin:{x:1,y:0.6},
+      colors:['#d4af37','#f4e5b1','#ffd700'],
+      zIndex:999
+    });
+  },400);
+}
+
+startBtn.addEventListener('click',()=>{
+  screenList.style.display='none';
+  screenSlot.style.display='flex';
+  buildParticles();
+  buildTrack();
+  isSpinning=true;
+  isStopping=false;
+  speed=0;
+  currentY=0;
+  winnerOverlay.style.display='none';
+  raf=requestAnimationFrame(spinLoop);
+});
+
+function onPressStart(){
+  if(!isSpinning||isStopping)return;
+  pressStart=Date.now();
+}
+
+function onPressEnd(){
+  if(!isSpinning||isStopping)return;
+  const held=Date.now()-pressStart;
+  doStop(held>=800);
+}
+
+stopBtn.addEventListener('touchstart',e=>{e.preventDefault();onPressStart()},{passive:false});
+stopBtn.addEventListener('touchend',e=>{e.preventDefault();onPressEnd()},{passive:false});
+stopBtn.addEventListener('mousedown',onPressStart);
+stopBtn.addEventListener('mouseup',onPressEnd);
+
+resetBtn.addEventListener('click',()=>{
+  cancelAnimationFrame(raf);
+  isSpinning=false;
+  isStopping=false;
+  winnerOverlay.style.display='none';
+  screenSlot.style.display='none';
+  screenList.style.display='flex';
+});
+
+})();
+</script>
+</body>
+</html>
