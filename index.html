@@ -555,13 +555,7 @@ function doStop(cheat){
   cancelAnimationFrame(raf);
 
   function easeOut(t){
-    if(t<0.6){
-      const p=t/0.6;
-      return 0.7*(1-Math.pow(1-p,3));
-    }else{
-      const p=(t-0.6)/0.4;
-      return 0.7+0.3*(1-Math.pow(1-p,5));
-    }
+    return t===1?1:1-Math.pow(2,-10*t);
   }
 
   function decelLoop(ts){
